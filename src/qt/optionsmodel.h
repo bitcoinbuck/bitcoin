@@ -46,6 +46,9 @@ public:
         DatabaseCache,          // int
         SpendZeroConfChange,    // bool
         Listen,                 // bool
+        MaximumGeneratedBlockSize, //QString
+        ExcessiveBlockSize,        //QString
+        ExcessiveAcceptanceDepth,  //QString
         OptionIDRowCount,
     };
 

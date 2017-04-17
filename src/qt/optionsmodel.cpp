@@ -18,6 +18,7 @@
 #include "netbase.h"
 #include "txdb.h" // for -dbcache defaults
 #include "intro.h" 
+#include "consensus/consensus.h"
 
 #ifdef ENABLE_WALLET
 #include "wallet/wallet.h"
@@ -147,6 +148,22 @@ void OptionsModel::Init(bool resetSettings)
         settings.setValue("language", "");
     if (!SoftSetArg("-lang", settings.value("language").toString().toStdString()))
         addOverriddenOption("-lang");
+        
+    // emergent consensus
+    if (!settings.contains("MaximumGeneratedBlockSize"))
+        settings.setValue("MaximumGeneratedBlockSize", DEFAULT_MAX_BLOCK_BASE_SIZE);
+    if (!SoftSetArg("-blockmaxsize", settings.value("MaximumGeneratedBlockSize").toString().toStdString()))
+        addOverriddenOption("-blockmaxsize");
+
+    if (!settings.contains("ExcessiveBlockSize"))
+        settings.setValue("ExcessiveBlockSize", DEFAULT_MAX_BLOCK_BASE_SIZE);
+    if (!SoftSetArg("-excessiveblocksize", settings.value("ExcessiveBlockSize").toString().toStdString()))
+        addOverriddenOption("-excessiveblocksize");
+
+    if (!settings.contains("ExcessiveAcceptanceDepth"))
+        settings.setValue("ExcessiveAcceptanceDepth", 16);
+    if (!SoftSetArg("-excessiveacceptdepth", settings.value("ExcessiveAcceptanceDepth").toString().toStdString()))
+        addOverriddenOption("-excessiveacceptdepth");
 
     language = settings.value("language").toString();
 }
@@ -247,6 +264,15 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("nThreadsScriptVerif");
         case Listen:
             return settings.value("fListen");
+            
+        // blocksize tab    
+        case MaximumGeneratedBlockSize:
+			return settings.value("MaximumGeneratedBlockSize"); 
+        case ExcessiveBlockSize:
+			return settings.value("ExcessiveBlockSize");
+        case ExcessiveAcceptanceDepth:
+			return settings.value("ExcessiveAcceptanceDepth");     
+            
         default:
             return QVariant();
         }
@@ -395,8 +421,26 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
                 setRestartRequired(true);
             }
             break;
-        default:
+            
+        // blocksize tab    
+        case MaximumGeneratedBlockSize:
+            if (settings.value("MaximumGeneratedBlockSize") != value) {
+                settings.setValue("MaximumGeneratedBlockSize", value);
+                setRestartRequired(true);
+            }
             break;
+        case ExcessiveBlockSize:
+            if (settings.value("ExcessiveBlockSize") != value) {
+                settings.setValue("ExcessiveBlockSize", value);
+                setRestartRequired(true);
+            }
+            break;
+        case ExcessiveAcceptanceDepth:
+            if (settings.value("ExcessiveAcceptanceDepth") != value) {
+                settings.setValue("ExcessiveAcceptanceDepth", value);
+                setRestartRequired(true);
+            }
+            break;        
         }
     }
 

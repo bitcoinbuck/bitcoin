@@ -34,7 +34,9 @@ OptionsDialog::OptionsDialog(QWidget *parent, bool enableWallet) :
     QDialog(parent),
     ui(new Ui::OptionsDialog),
     model(0),
-    mapper(0)
+    mapper(0),
+    okbutton_blocksize(true),
+    okbutton_proxy(true)
 {
     ui->setupUi(this);
 
@@ -114,6 +116,11 @@ OptionsDialog::OptionsDialog(QWidget *parent, bool enableWallet) :
     ui->thirdPartyTxUrls->setPlaceholderText("https://example.com/tx/%s");
 #endif
 
+    /* Unified tab init */
+    ui->MaximumGeneratedBlockSize->setValidator(new QIntValidator(0, 0x7FFFFFFF, this));
+    ui->ExcessiveBlockSize->setValidator(new QIntValidator(0, 0x7FFFFFFF, this));
+    ui->ExcessiveAcceptanceDepth->setValidator(new QIntValidator(0, 0x7FFFFFFF, this));
+    
     ui->unit->setModel(new BitcoinUnits(this));
 
     /* Widget-to-option mapper */
@@ -171,6 +178,11 @@ void OptionsDialog::setModel(OptionsModel *_model)
     /* Display */
     connect(ui->lang, SIGNAL(valueChanged()), this, SLOT(showRestartWarning()));
     connect(ui->thirdPartyTxUrls, SIGNAL(textChanged(const QString &)), this, SLOT(showRestartWarning()));
+    /* Blocksize */
+    connect(ui->MaximumGeneratedBlockSize, SIGNAL(textChanged(const QString &)), this, SLOT(showRestartWarning()));
+    connect(ui->ExcessiveBlockSize, SIGNAL(textChanged(const QString &)), this, SLOT(showRestartWarning()));
+    connect(ui->ExcessiveAcceptanceDepth, SIGNAL(textChanged(const QString &)), this, SLOT(showRestartWarning()));
+    
 }
 
 void OptionsDialog::setMapper()
@@ -207,11 +219,17 @@ void OptionsDialog::setMapper()
     mapper->addMapping(ui->lang, OptionsModel::Language);
     mapper->addMapping(ui->unit, OptionsModel::DisplayUnit);
     mapper->addMapping(ui->thirdPartyTxUrls, OptionsModel::ThirdPartyTxUrls);
+    
+    /* blocksize */
+    mapper->addMapping(ui->MaximumGeneratedBlockSize, OptionsModel::MaximumGeneratedBlockSize);
+    mapper->addMapping(ui->ExcessiveBlockSize, OptionsModel::ExcessiveBlockSize);
+    mapper->addMapping(ui->ExcessiveAcceptanceDepth, OptionsModel::ExcessiveAcceptanceDepth);
+    
 }
 
-void OptionsDialog::setOkButtonState(bool fState)
+void OptionsDialog::setOkButtonState()
 {
-    ui->okButton->setEnabled(fState);
+    ui->okButton->setEnabled(okbutton_blocksize | okbutton_proxy);
 }
 
 void OptionsDialog::on_resetButton_clicked()
@@ -273,6 +291,28 @@ void OptionsDialog::showRestartWarning(bool fPersistent)
 {
     ui->statusLabel->setStyleSheet("QLabel { color: red; }");
 
+    int mmb, ebs;
+    mmb = ui->MaximumGeneratedBlockSize->text().toInt();
+    ebs = ui->ExcessiveBlockSize->text().toInt();
+
+    if ( mmb <= ebs )
+    {
+        ui->ExcessiveBlockSize->setStyleSheet("");
+        ui->MaximumGeneratedBlockSize->setStyleSheet("");
+        okbutton_blocksize = true;
+        setOkButtonState();
+    }
+    else
+    {
+        // data is OOR
+        ui->statusLabel->setText(tr("Mined block size cannot be larger then excessive block size!"));
+        ui->MaximumGeneratedBlockSize->setStyleSheet("QLineEdit {  background-color: red; }");
+        ui->ExcessiveBlockSize->setStyleSheet("QLineEdit { background-color: red; }");
+        okbutton_blocksize = false;
+        setOkButtonState();
+        return;
+    }
+
     if(fPersistent)
     {
         ui->statusLabel->setText(tr("Client restart required to activate changes."));
@@ -300,12 +340,14 @@ void OptionsDialog::updateProxyValidationState()
     QValidatedLineEdit *otherProxyWidget = (pUiProxyIp == ui->proxyIpTor) ? ui->proxyIp : ui->proxyIpTor;
     if (pUiProxyIp->isValid() && (!ui->proxyPort->isEnabled() || ui->proxyPort->text().toInt() > 0) && (!ui->proxyPortTor->isEnabled() || ui->proxyPortTor->text().toInt() > 0))
     {
-        setOkButtonState(otherProxyWidget->isValid()); //only enable ok button if both proxys are valid
+        okbutton_proxy = otherProxyWidget->isValid();
+        setOkButtonState(); //only enable ok button if both proxys are valid
         clearStatusLabel();
     }
     else
     {
-        setOkButtonState(false);
+        okbutton_proxy = false;
+        setOkButtonState();
         ui->statusLabel->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel->setText(tr("The supplied proxy address is invalid."));
     }

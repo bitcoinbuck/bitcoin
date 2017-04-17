@@ -504,6 +504,11 @@ std::string HelpMessage(HelpMessageMode mode)
         strUsage += HelpMessageOpt("-rpcservertimeout=<n>", strprintf("Timeout during HTTP requests (default: %d)", DEFAULT_HTTP_SERVER_TIMEOUT));
     }
 
+    strUsage += HelpMessageGroup(_("Emergent Consensus options:"));
+    strUsage += HelpMessageOpt("-blockmaxsize=<size>", _("Set the largest block that shall be mined by this miner (in bytes). This should be the current block size until miners consensus is reached for a blocksize increase."));
+    strUsage += HelpMessageOpt("-excessiveblocksize=<size>", _("Set the maximum blocksize that this node will accept as a valid block (in bytes). Blocks above this size shall be considered 'excessive', that is they will not be relayed or become part of the chain until 'Excessive Acceptance' blocks have been mined on top of them."));
+    strUsage += HelpMessageOpt("-excessiveacceptdepth=<size>", _("Set The excessive acceptance depth in blocks (in blocks). An excessive block normally blocks a chain from being accepted. However, if the chain grows more than this depth, then accept the excessive block (and the chain)."));
+
     return strUsage;
 }
 
@@ -1247,6 +1252,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     // sanitize comments per BIP-0014, format user agent and check total size
     std::vector<std::string> uacomments;
+    uacomments.push_back("buck");
     if (mapMultiArgs.count("-uacomment")) {
         BOOST_FOREACH(std::string cmt, mapMultiArgs.at("-uacomment"))
         {
